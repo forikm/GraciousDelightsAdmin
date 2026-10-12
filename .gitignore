@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vercel/
+.env*
+!.env.example
+*.zip
+*.docx
+reviewer_work/
+previews/
+.test-data/
+*.log
+

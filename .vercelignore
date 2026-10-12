@@ -1,0 +1,18 @@
+# Keep the application directories traversable while excluding local-only files.
+.git/
+.vercel/
+node_modules/
+.test-data/
+.env*
+*.zip
+*.docx
+*.log
+previews/
+reviewer_work/
+dist/
+tests/
+db/
+server.mjs
+scripts/password.mjs
+scripts/migrate.mjs
+*.md

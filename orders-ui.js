@@ -1,0 +1,31 @@
+import { available } from './domain.js';
+
+export function createOrderingUI(ui) {
+  const {getState,commit,openModal,bindForm,formFooter,toast,header,money,esc,icon}=ui;
+  const $=s=>document.querySelector(s);
+  const orders=()=>getState().orders || [];
+  let filter='pending';
+  const pendingCount=()=>orders().filter(o=>o.status==='pending').length;
+  const statusLabel=s=>({pending:'Pending approval',accepted:'Accepted',ready:'Ready',completed:'Completed',declined:'Declined',cancelled:'Cancelled'}[s] || s);
+  const status=o=>`<span class="order-status status-${o.status}">${esc(statusLabel(o.status))}</span>`;
+  const date=o=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short'}).format(new Date(o.createdAt));
+  function itemSummary(o){return `<div class="order-items">${o.items.map(i=>`<div><span>${i.quantity} × ${esc(i.name)}</span><strong>${money(i.lineTotal)}</strong></div>`).join('')}<div class="order-total"><span>Product total</span><strong>${money(o.total)}</strong></div></div>`;}
+  function adminOrders(){
+    const all=orders(),active=all.filter(o=>['accepted','ready'].includes(o.status));
+    const shown=all.filter(o=>filter==='all'||(filter==='active'?['accepted','ready'].includes(o.status):o.status===filter));
+    return `<div class="stats-grid"><div class="stat"><span>Waiting for your reply</span><strong>${pendingCount()}<small>new order requests</small></strong>${icon('history')}</div><div class="stat"><span>In the kitchen</span><strong>${active.length}<small>accepted or ready orders</small></strong>${icon('cake')}</div><div class="stat"><span>Order history</span><strong>${all.length}<small>requests received</small></strong>${icon('book')}</div></div><div class="info-banner">${icon('box')}<span><strong>Stock is reserved for open requests.</strong> Accepting keeps the reservation; completion deducts finished stock once. Declining or cancelling releases it. Ingredients are already accounted for during production.</span></div><div class="orders-toolbar"><h2>Order inbox</h2><label>Show <select id="order-filter"><option value="pending" ${filter==='pending'?'selected':''}>Pending approval</option><option value="active" ${filter==='active'?'selected':''}>Accepted & ready</option><option value="completed" ${filter==='completed'?'selected':''}>Completed</option><option value="all" ${filter==='all'?'selected':''}>All requests</option></select></label></div><div id="orders-list">${shown.length?shown.map(o=>`<article class="admin-order-card" data-order-id="${o.id}"><div class="order-heading"><div><strong>${o.reference}</strong><small>${date(o)}</small></div>${status(o)}</div><div class="admin-order-columns"><div class="order-customer"><h3>${esc(o.customer.name)}</h3><a href="tel:${esc(o.customer.phone.replace(/[^+\d]/g,''))}">${icon('phone')}${esc(o.customer.phone)}</a><p><strong>${o.customer.fulfillment==='pickup'?'Pickup':'Delivery requested'}</strong>${o.customer.address?`<br>${esc(o.customer.address)}`:''}</p>${o.customer.notes?`<p class="customer-notes">${esc(o.customer.notes)}</p>`:''}</div>${itemSummary(o)}</div>${o.adminNote?`<p class="admin-order-note"><strong>Admin note:</strong> ${esc(o.adminNote)}</p>`:''}<div class="order-actions">${o.status==='pending'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="accepted">Accept request ${icon('check')}</button><button class="button secondary" data-action="order-status" data-id="${o.id}" data-status="declined">Decline</button>`:o.status==='accepted'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="ready">Mark ready</button>`:o.status==='ready'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="completed">Complete order ${icon('check')}</button>`:''}${['accepted','ready'].includes(o.status)?`<button class="text-button danger-text" data-action="order-status" data-id="${o.id}" data-status="cancelled">Cancel order</button>`:''}</div></article>`).join(''):`<div class="empty-state">${icon('book')}<h3>${filter==='pending'?'The kitchen is all caught up':'No orders in this view'}</h3><p>${filter==='pending'?'New customer requests will appear here.':'Choose another filter to view the order history.'}</p></div>`}</div><p class="help-note">The inbox updates automatically every 15 seconds while open.</p>`;
+  }
+  function wireAdmin(){ $('#order-filter')?.addEventListener('change',e=>{filter=e.target.value;$('#admin-body').innerHTML=adminOrders();wireAdmin();}); }
+  function updateOrder(id,next,actor='admin'){
+    const order=orders().find(o=>o.id===id);if(!order)return;
+    if(actor==='customer'&&!getState().myOrderIds.includes(id))return;
+    const revision=getState().revision;
+    const titles={accepted:'Accept request',declined:'Decline request',ready:'Mark order ready',completed:'Complete order',cancelled:'Cancel order'};
+    const reasonRequired=actor==='admin'&&['declined','cancelled'].includes(next);
+    openModal(`${titles[next]} · ${order.reference}`,`<form>${itemSummary(order)}<p class="modal-description">${next==='completed'?'This records fulfillment and removes these units from finished stock. Ingredient inventory stays unchanged.':next==='declined'||next==='cancelled'?'This releases the reserved products for other customers.':next==='accepted'?'The customer can see that their request has been accepted. Products stay reserved until fulfillment.':'The customer can see that their order is ready.'}</p>${actor==='admin'?`<label>${reasonRequired?'Reason (visible to customer)':'Message to customer (optional)'}<textarea name="note" maxlength="500" rows="3" ${reasonRequired?'required':''} placeholder="${reasonRequired?'Explain why this order cannot proceed':'e.g. Pickup confirmed for 3 PM'}">${!reasonRequired?esc(order.adminNote):''}</textarea></label>`:''}${formFooter(titles[next])}</form>`);
+    bindForm(async data=>{await commit({type:'updateOrder',id,status:next,actor,note:data.get('note')||''},revision);toast(`${order.reference}: ${statusLabel(next)}.`);});
+  }
+  async function handleAction(action,id,el){if(action==='order-status')updateOrder(id,el.dataset.status);}
+  function refresh() {}
+  return {pendingCount,adminOrders,wireAdmin,handleAction,refresh};
+}
