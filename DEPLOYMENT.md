@@ -11,3 +11,7 @@ No migration or seed is needed for the existing database. Both sites use shop_st
 The admin PWA installs independently of the customer PWA. Sign in with the existing email and password. Customer-site sessions are never authorized as admin.
 
 Verify the target project before every deployment. Preview deployments must have separate database and credentials before they can process real changes.
+
+Live admin: https://gracious-delights-admin.vercel.app/
+Initial production deployment: 4fQXZ3DEX6uqaaDuQ99AcXNL6XyA, source commit 5e82221.
+GitHub automatic deployment is not connected; publish future source changes manually after verifying the project.
