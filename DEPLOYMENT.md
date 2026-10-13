@@ -1,6 +1,6 @@
 # Admin deployment
 
-Repository: https://github.com/40kilometer/GraciousDelightsAdmin
+Repository: https://github.com/forikm/GraciousDelightsAdmin
 
 Vercel workspace fita4; project gracious-delights-admin, distinct from the customer project gracious-delights and Fetch-it Admin.
 
