@@ -1,4 +1,8 @@
+import { SIGN_CATALOG } from './menu-catalog.js';
+import { PRODUCT_PHOTOS } from './product-photos.js';
+
 export const MAX_STOCK = 19;
+export const stockLimit = product => product.stockLimit ?? MAX_STOCK;
 export const round = n => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const RESERVED_STATUSES = new Set(['pending','accepted','ready']);
 export function reserved(state, productId) {
@@ -39,7 +43,7 @@ export function requirements(state, recipe, quantity) {
 }
 export function capacity(state, product) {
   if (!product.recipe.length) return 0;
-  return Math.max(0, Math.min(MAX_STOCK - product.stock, ...product.recipe.map(r => Math.floor(Math.round((state.ingredients.find(i => i.id === r.ingredientId)?.quantity ?? 0) * 1000) / Math.round(r.amount * 1000)))));
+  return Math.max(0, Math.min(stockLimit(product) - product.stock, ...product.recipe.map(r => Math.floor(Math.round((state.ingredients.find(i => i.id === r.ingredientId)?.quantity ?? 0) * 1000) / Math.round(r.amount * 1000)))));
 }
 function log(state, type, title, changes = []) {
   state.activity.unshift({ id: id(), type, title, changes, at: new Date().toISOString() });
@@ -52,19 +56,70 @@ function consume(state, recipe, quantity, title) {
   if (quantity) log(state, 'production', title, rows.map(r => ({ name: r.name, amount: -r.required, unit: r.unit })));
 }
 function validateProduct(state, product, existingId) {
+  if(product.stockLimit!==undefined){numeric(product.stockLimit,'Stock capacity',1,true);if(product.stockLimit>10000)fail('Stock capacity cannot exceed 10,000 units.');if(product.stockLimit<product.stock)fail('Stock capacity cannot be lower than current stock.');}
   product.name = text(product.name, 'Product name');
   product.category = text(product.category, 'Category', 60);
   product.description = text(product.description, 'Description', 1000);
   numeric(product.price, 'Price', 0.01);
   if (Math.abs(product.price * 100 - Math.round(product.price * 100)) > 1e-8) fail('Price supports up to 2 decimal places.');
   if (state.products.some(p => p.id !== existingId && p.name.toLowerCase() === product.name.toLowerCase())) fail('A product with this name already exists.');
-  if (typeof product.image !== 'string' || !(/^(assets\/facebook\/[a-f0-9]+\.jpg|\/api\/shop\?op=image&id=[a-f0-9]{64})$/.test(product.image) || /^data:image\/(jpeg|png|webp);base64,/.test(product.image))) fail('Choose a product photo or upload a JPEG, PNG, or WebP image.');
+  if (typeof product.image !== 'string' || !(/^(assets\/facebook\/[a-f0-9]+\.jpg|assets\/menu-signs\/(crinkles-matcha|ensaymada-cinnamon-flavors|ensaymada-cinnamon-prices|yema-banana)\.png|\/api\/shop\?op=image&id=[a-f0-9]{64})$/.test(product.image) || /^data:image\/(jpeg|png|webp);base64,/.test(product.image))) fail('Choose a product photo or upload a JPEG, PNG, or WebP image.');
+  if (product.recipePending && product.stock===0 && Array.isArray(product.recipe) && !product.recipe.length) return;
   validateRecipe(state, product.recipe);
+  delete product.recipePending;
 }
 export function transition(current, action) {
   const state = structuredClone(current);
   state.orders ||= [];
   switch (action.type) {
+    case 'addAnnouncement':
+    case 'editAnnouncement': {
+      if(typeof action.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(action.id))fail('Invalid announcement identifier.');
+      state.announcements ||= [];
+      const current=state.announcements.find(item=>item.id===action.id);
+      if(action.type==='addAnnouncement'&&current)return state;
+      if(action.type==='editAnnouncement'&&!current)fail('Announcement no longer exists.');
+      const input=action.announcement||{};
+      const title=text(input.title,'Announcement title',120),body=text(input.body,'Announcement text',5000);
+      if(typeof input.published!=='boolean'||typeof input.pinned!=='boolean')fail('Choose valid announcement visibility and pin settings.');
+      const now=new Date().toISOString();
+      const entry={id:action.id,title,body,published:input.published,pinned:input.pinned,createdAt:current?.createdAt||now,updatedAt:now,publishedAt:current?.publishedAt||null};
+      if(entry.published&&!entry.publishedAt)entry.publishedAt=now;
+      if(current)Object.assign(current,entry);else state.announcements.unshift(entry);
+      log(state,'announcement',`${entry.published?'Published':'Saved draft'}: ${entry.title}`);
+      break;
+    }
+    case 'toggleAnnouncement': {
+      const entry=(state.announcements||[]).find(item=>item.id===action.id);
+      if(!entry)fail('Announcement no longer exists.');
+      entry.published=!entry.published;entry.updatedAt=new Date().toISOString();
+      if(entry.published&&!entry.publishedAt)entry.publishedAt=entry.updatedAt;
+      log(state,'announcement',`${entry.published?'Published':'Unpublished'}: ${entry.title}`);
+      break;
+    }
+    case 'applyProductPhotos': {
+      let changed=0;
+      for(const product of state.products){
+        const photo=PRODUCT_PHOTOS[product.id];
+        if(photo && product.image.startsWith('assets/menu-signs/')){product.image=photo.image;changed++;}
+      }
+      if(!changed)return state;
+      log(state,'product',`Updated ${changed} products with verified Facebook photographs`);
+      break;
+    }
+    case 'importSignCatalog': {
+      let added=0;
+      for (const item of SIGN_CATALOG) {
+        if (state.products.some(product=>product.id===item.id || product.name.toLowerCase()===item.name.toLowerCase())) continue;
+        const product={...item,active:true,stock:0,recipe:[],recipePending:true};
+        validateProduct(state,product);
+        state.products.push(product);
+        added++;
+      }
+      if (!added) return state;
+      log(state,'product',`Added ${added} products from the menu signs with zero stock; recipes need setup`);
+      break;
+    }
     case 'submitOrder': {
       const requestId = text(action.requestId, 'Request ID', 80);
       if (state.orders.some(o=>o.id===requestId)) return state;
@@ -121,7 +176,7 @@ export function transition(current, action) {
       const p = { ...action.product, id: id(), active: true };
       validateProduct(state, p);
       numeric(p.stock, 'Initial stock', 0, true);
-      if (p.stock > MAX_STOCK) fail('Product stock must stay below 20 (maximum 19).');
+      if (p.stock > stockLimit(p)) fail(`Product stock exceeds capacity (maximum ${stockLimit(p)}).`);
       consume(state, p.recipe, p.stock, `Made ${p.stock} × ${p.name} (initial stock)`);
       state.products.push(p);
       log(state, 'product', `Added ${p.name}`);
@@ -133,6 +188,7 @@ export function transition(current, action) {
       const next = { ...p, ...action.product, id: p.id, stock: p.stock, active: p.active };
       validateProduct(state, next, p.id);
       Object.assign(p, next);
+      if (!next.recipePending) delete p.recipePending;
       log(state, 'recipe', `Updated ${p.name}; recipe applies to future batches`);
       break;
     }
@@ -140,7 +196,7 @@ export function transition(current, action) {
       const p = state.products.find(p => p.id === action.id);
       if (!p) fail('Product no longer exists.');
       numeric(action.quantity, 'Batch quantity', 1, true);
-      if (p.stock + action.quantity > MAX_STOCK) fail(`Maximum 19 units per product. You can add at most ${MAX_STOCK - p.stock}.`);
+      if (p.stock + action.quantity > stockLimit(p)) fail(`Maximum ${stockLimit(p)} units for this product. You can add at most ${stockLimit(p) - p.stock}.`);
       consume(state, p.recipe, action.quantity, `Made ${action.quantity} × ${p.name}`);
       p.stock += action.quantity;
       break;

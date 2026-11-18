@@ -1,6 +1,6 @@
 import { getPool } from '../lib/db.js';
 import { cookies, cookie, digest, randomToken, verifyPassword } from '../lib/auth.js';
-import { readState, mutate, problem } from '../lib/store.js';
+import { readState, mutate, problem, trackOrder } from '../lib/store.js';
 import { SITE_ROLE } from '../lib/site.js';
 
 export function createHandler(getDb=getPool, env=process.env, role=SITE_ROLE) {
@@ -60,6 +60,10 @@ export function createHandler(getDb=getPool, env=process.env, role=SITE_ROLE) {
       if (role==='admin' && ['state','mutate'].includes(op) && !identity.admin) throw problem(401,'Admin sign-in is required.');
       if (role==='admin' && op==='mutate' && body.action?.type==='submitOrder') throw problem(403,'Place customer orders on the customer website.');
       if (op==='state' && req.method==='GET') result=await readState(db,identity);
+      else if(op==='track' && req.method==='POST' && role==='customer'){
+        await rateLimit('tracking',12);
+        result=await trackOrder(db,body.reference,body.code);
+      }
       else if (op==='login' && req.method==='POST') {
         if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD_HASH) throw problem(503,'Admin sign-in has not been configured.');
         await rateLimit('login',8);

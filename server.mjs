@@ -12,7 +12,7 @@ const server = http.createServer(async (req, res) => {
     if (new URL(req.url, 'http://localhost').pathname === '/api/shop') return await handler(req, res);
     if (!['GET','HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-    const publicFiles = new Set(['/index.html','/styles.css','/orders.css','/app.js','/domain.js','/orders-ui.js','/manifest.webmanifest','/sw.js']);
+    const publicFiles = new Set(['/index.html','/styles.css','/orders.css','/app.js', '/interaction.js','/domain.js','/menu-catalog.js','/product-photos.js','/announcements.js','/announcements.css','/presentation-history.js','/orders-ui.js','/manifest.webmanifest','/sw.js']);
     if (pathname !== '/' && !publicFiles.has(pathname) && !pathname.startsWith('/assets/')) { res.writeHead(404); res.end('Not found'); return; }
     const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep) || pathname.split('/').some(p => p.startsWith('.')) || !(await stat(file)).isFile()) { res.writeHead(404); res.end('Not found'); return; }

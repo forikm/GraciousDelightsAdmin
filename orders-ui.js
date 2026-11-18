@@ -1,31 +1,141 @@
-import { available } from './domain.js';
+const VIEWS = [
+  ['pending', 'Needs review'],
+  ['active', 'Accepted & ready'],
+  ['completed', 'Completed'],
+  ['cancelled', 'Cancelled'],
+  ['declined', 'Declined'],
+  ['all', 'All requests']
+];
+const STATUSES = {
+  pending: 'Awaiting review', accepted: 'Accepted', ready: 'Ready',
+  completed: 'Completed', declined: 'Declined', cancelled: 'Cancelled'
+};
+const TRANSITIONS = {
+  pending: ['accepted', 'declined'],
+  accepted: ['ready', 'cancelled'],
+  ready: ['completed', 'cancelled']
+};
+const ACTION_LABELS = {
+  accepted: 'Accept request', declined: 'Decline request', ready: 'Mark ready',
+  completed: 'Mark completed', cancelled: 'Cancel order'
+};
+const ACTION_HELP = {
+  accepted: 'The customer will see that you accepted the request. Its items stay reserved.',
+  ready: 'The customer will see that their order is ready.',
+  completed: 'This records fulfillment and deducts these units from finished stock.',
+  declined: 'This releases the reserved products for other customers.',
+  cancelled: 'This releases the reserved products for other customers.'
+};
+
+function deliveryPinLink(location) {
+  if (!Number.isFinite(location?.lat) || Math.abs(location.lat) > 90 ||
+      !Number.isFinite(location?.lng) || Math.abs(location.lng) > 180) return '';
+  return `<br><a href="https://www.google.com/maps/search/?api=1&amp;query=${location.lat},${location.lng}" target="_blank" rel="noopener noreferrer">Open delivery pin in Google Maps</a>`;
+}
 
 export function createOrderingUI(ui) {
-  const {getState,commit,openModal,bindForm,formFooter,toast,header,money,esc,icon}=ui;
-  const $=s=>document.querySelector(s);
-  const orders=()=>getState().orders || [];
-  let filter='pending';
-  const pendingCount=()=>orders().filter(o=>o.status==='pending').length;
-  const statusLabel=s=>({pending:'Pending approval',accepted:'Accepted',ready:'Ready',completed:'Completed',declined:'Declined',cancelled:'Cancelled'}[s] || s);
-  const status=o=>`<span class="order-status status-${o.status}">${esc(statusLabel(o.status))}</span>`;
-  const date=o=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short'}).format(new Date(o.createdAt));
-  function itemSummary(o){return `<div class="order-items">${o.items.map(i=>`<div><span>${i.quantity} × ${esc(i.name)}</span><strong>${money(i.lineTotal)}</strong></div>`).join('')}<div class="order-total"><span>Product total</span><strong>${money(o.total)}</strong></div></div>`;}
-  function adminOrders(){
-    const all=orders(),active=all.filter(o=>['accepted','ready'].includes(o.status));
-    const shown=all.filter(o=>filter==='all'||(filter==='active'?['accepted','ready'].includes(o.status):o.status===filter));
-    return `<div class="stats-grid"><div class="stat"><span>Waiting for your reply</span><strong>${pendingCount()}<small>new order requests</small></strong>${icon('history')}</div><div class="stat"><span>In the kitchen</span><strong>${active.length}<small>accepted or ready orders</small></strong>${icon('cake')}</div><div class="stat"><span>Order history</span><strong>${all.length}<small>requests received</small></strong>${icon('book')}</div></div><div class="info-banner">${icon('box')}<span><strong>Stock is reserved for open requests.</strong> Accepting keeps the reservation; completion deducts finished stock once. Declining or cancelling releases it. Ingredients are already accounted for during production.</span></div><div class="orders-toolbar"><h2>Order inbox</h2><label>Show <select id="order-filter"><option value="pending" ${filter==='pending'?'selected':''}>Pending approval</option><option value="active" ${filter==='active'?'selected':''}>Accepted & ready</option><option value="completed" ${filter==='completed'?'selected':''}>Completed</option><option value="all" ${filter==='all'?'selected':''}>All requests</option></select></label></div><div id="orders-list">${shown.length?shown.map(o=>`<article class="admin-order-card" data-order-id="${o.id}"><div class="order-heading"><div><strong>${o.reference}</strong><small>${date(o)}</small></div>${status(o)}</div><div class="admin-order-columns"><div class="order-customer"><h3>${esc(o.customer.name)}</h3><a href="tel:${esc(o.customer.phone.replace(/[^+\d]/g,''))}">${icon('phone')}${esc(o.customer.phone)}</a><p><strong>${o.customer.fulfillment==='pickup'?'Pickup':'Delivery requested'}</strong>${o.customer.address?`<br>${esc(o.customer.address)}`:''}</p>${o.customer.notes?`<p class="customer-notes">${esc(o.customer.notes)}</p>`:''}</div>${itemSummary(o)}</div>${o.adminNote?`<p class="admin-order-note"><strong>Admin note:</strong> ${esc(o.adminNote)}</p>`:''}<div class="order-actions">${o.status==='pending'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="accepted">Accept request ${icon('check')}</button><button class="button secondary" data-action="order-status" data-id="${o.id}" data-status="declined">Decline</button>`:o.status==='accepted'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="ready">Mark ready</button>`:o.status==='ready'?`<button class="button primary" data-action="order-status" data-id="${o.id}" data-status="completed">Complete order ${icon('check')}</button>`:''}${['accepted','ready'].includes(o.status)?`<button class="text-button danger-text" data-action="order-status" data-id="${o.id}" data-status="cancelled">Cancel order</button>`:''}</div></article>`).join(''):`<div class="empty-state">${icon('book')}<h3>${filter==='pending'?'The kitchen is all caught up':'No orders in this view'}</h3><p>${filter==='pending'?'New customer requests will appear here.':'Choose another filter to view the order history.'}</p></div>`}</div><p class="help-note">The inbox updates automatically every 15 seconds while open.</p>`;
+  const {getState, commit, openModal, bindForm, formFooter, toast, money, esc, icon} = ui;
+  const $ = selector => document.querySelector(selector);
+  const orders = () => getState().orders || [];
+  const date = new Intl.DateTimeFormat('en-PH', {dateStyle:'medium', timeStyle:'short'});
+  let filter = 'pending';
+
+  const inProgress = order => ['accepted', 'ready'].includes(order.status);
+  const filtered = view => orders().filter(order => view === 'all' ||
+    (view === 'active' ? inProgress(order) : order.status === view));
+  const pendingCount = () => filtered('pending').length;
+  const countLabel = count => `${count} ${count === 1 ? 'request' : 'requests'}`;
+
+  function itemSummary(order) {
+    return `<div class="order-items">${order.items.map(item => `
+      <div><span>${item.quantity} × ${esc(item.name)}</span><strong>${money(item.lineTotal)}</strong></div>
+    `).join('')}<div class="order-total"><span>Product total</span><strong>${money(order.total)}</strong></div></div>`;
   }
-  function wireAdmin(){ $('#order-filter')?.addEventListener('change',e=>{filter=e.target.value;$('#admin-body').innerHTML=adminOrders();wireAdmin();}); }
-  function updateOrder(id,next,actor='admin'){
-    const order=orders().find(o=>o.id===id);if(!order)return;
-    if(actor==='customer'&&!getState().myOrderIds.includes(id))return;
-    const revision=getState().revision;
-    const titles={accepted:'Accept request',declined:'Decline request',ready:'Mark order ready',completed:'Complete order',cancelled:'Cancel order'};
-    const reasonRequired=actor==='admin'&&['declined','cancelled'].includes(next);
-    openModal(`${titles[next]} · ${order.reference}`,`<form>${itemSummary(order)}<p class="modal-description">${next==='completed'?'This records fulfillment and removes these units from finished stock. Ingredient inventory stays unchanged.':next==='declined'||next==='cancelled'?'This releases the reserved products for other customers.':next==='accepted'?'The customer can see that their request has been accepted. Products stay reserved until fulfillment.':'The customer can see that their order is ready.'}</p>${actor==='admin'?`<label>${reasonRequired?'Reason (visible to customer)':'Message to customer (optional)'}<textarea name="note" maxlength="500" rows="3" ${reasonRequired?'required':''} placeholder="${reasonRequired?'Explain why this order cannot proceed':'e.g. Pickup confirmed for 3 PM'}">${!reasonRequired?esc(order.adminNote):''}</textarea></label>`:''}${formFooter(titles[next])}</form>`);
-    bindForm(async data=>{await commit({type:'updateOrder',id,status:next,actor,note:data.get('note')||''},revision);toast(`${order.reference}: ${statusLabel(next)}.`);});
+
+  function orderActions(order) {
+    const transitions = TRANSITIONS[order.status];
+    if (!transitions) return '';
+    return `<div class="order-actions">${transitions.map((next, index) => `
+      <button class="button ${index === 0 ? 'primary' : 'secondary'}" data-action="order-status"
+        data-id="${esc(order.id)}" data-status="${next}" aria-label="${ACTION_LABELS[next]} ${esc(order.reference)}">
+        ${ACTION_LABELS[next]}
+      </button>`).join('')}</div>`;
   }
-  async function handleAction(action,id,el){if(action==='order-status')updateOrder(id,el.dataset.status);}
-  function refresh() {}
-  return {pendingCount,adminOrders,wireAdmin,handleAction,refresh};
+
+  function orderCards(shown) {
+    if (!shown.length) {
+      return `<div class="empty-state"><h3>${filter === 'pending' ? 'No requests need review' : 'No requests in this view'}</h3>
+        <p>${filter === 'pending' ? 'New customer requests will appear here.' : 'Choose another status to see more requests.'}</p></div>`;
+    }
+    return shown.map(order => `<article class="admin-order-card" data-order-id="${esc(order.id)}">
+      <div class="order-heading">
+        <div><h3>${esc(order.reference)}</h3><time datetime="${esc(order.createdAt)}">${date.format(new Date(order.createdAt))}</time></div>
+        <span class="order-status status-${esc(order.status)}">${esc(STATUSES[order.status] || order.status)}</span>
+      </div>
+      <div class="admin-order-columns">
+        <div class="order-customer">
+          <h4>${esc(order.customer.name)}</h4>
+          <a href="tel:${esc(order.customer.phone.replace(/[^+\d]/g, ''))}">${icon('phone')}${esc(order.customer.phone)}</a>
+          <p><strong>${order.customer.fulfillment === 'pickup' ? 'Pickup' : 'Delivery requested'}</strong>
+          ${order.customer.address ? `<br>${esc(order.customer.address)}` : ''}${deliveryPinLink(order.customer.location)}</p>
+          ${order.customer.notes ? `<p class="customer-notes">${esc(order.customer.notes)}</p>` : ''}
+        </div>
+        ${itemSummary(order)}
+      </div>
+      ${order.adminNote ? `<p class="admin-order-note"><strong>Message to customer:</strong> ${esc(order.adminNote)}</p>` : ''}
+      ${orderActions(order)}
+    </article>`).join('');
+  }
+
+  function adminOrders() {
+    const shown = filtered(filter);
+    return `<section class="order-inbox" aria-labelledby="inbox-title">
+      <div class="orders-toolbar">
+        <div><h2 id="inbox-title">Order inbox</h2><p class="inbox-count" id="orders-count" role="status">${countLabel(shown.length)}</p></div>
+        <label for="order-filter">Filter by status
+          <select id="order-filter">
+            ${VIEWS.map(([value, label]) => `<option value="${value}" ${filter === value ? 'selected' : ''}>${label} (${filtered(value).length})</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div id="orders-list">${orderCards(shown)}</div>
+      <details class="order-help"><summary>How orders affect stock</summary><p>Open requests reserve finished products. Completion deducts those units from stock. Declining or cancelling releases the reservation. Production accounts for ingredients separately.</p></details>
+    </section>`;
+  }
+
+  function wireAdmin() {
+    $('#order-filter')?.addEventListener('change', event => {
+      filter = event.target.value;
+      const shown = filtered(filter);
+      // Keep the native filter mounted while replacing its results.
+      $('#orders-list').innerHTML = orderCards(shown);
+      $('#orders-count').textContent = countLabel(shown.length);
+    });
+  }
+
+  function updateOrder(id, next) {
+    const order = orders().find(order => order.id === id);
+    if (!order || !TRANSITIONS[order.status]?.includes(next)) return;
+    const revision = getState().revision;
+    const label = ACTION_LABELS[next];
+    const requiresReason = ['declined', 'cancelled'].includes(next);
+    openModal(`${label} · ${order.reference}`, `<form>
+      ${itemSummary(order)}
+      <p class="modal-description">${ACTION_HELP[next]}</p>
+      <label>${requiresReason ? 'Reason (visible to the customer)' : 'Message to customer (optional)'}
+        <textarea name="note" maxlength="500" rows="3" ${requiresReason ? 'required' : ''}>${requiresReason ? '' : esc(order.adminNote)}</textarea>
+      </label>
+      ${formFooter(label)}
+    </form>`);
+    bindForm(async data => {
+      await commit({type:'updateOrder', id, status:next, actor:'admin', note:data.get('note') || ''}, revision);
+      toast(`${order.reference}: ${STATUSES[next]}.`);
+    });
+  }
+
+  function handleAction(action, id, element) {
+    if (action === 'order-status') updateOrder(id, element.dataset.status);
+  }
+
+  return {pendingCount, adminOrders, wireAdmin, handleAction, refresh() {}};
 }

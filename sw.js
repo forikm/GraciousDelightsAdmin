@@ -1,6 +1,6 @@
-const CACHE = 'gracious-delights-admin-shell-v1';
+const CACHE = 'gracious-delights-admin-shell-v8';
 const FILES = [
-  './', './index.html', './styles.css', './orders.css', './app.js', './domain.js', './orders-ui.js', './manifest.webmanifest',
+  './', './index.html', './styles.css', './orders.css', './app.js', './interaction.js', './domain.js', './menu-catalog.js', './product-photos.js', './announcements.js', './announcements.css', './presentation-history.js', './orders-ui.js', './manifest.webmanifest',
   './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable.png', './assets/placeholder.svg',
   './assets/facebook/a00aff175be206dd.jpg', './assets/facebook/a354c03220336924.jpg',
   './assets/facebook/d48aa4ba35954fb9.jpg', './assets/facebook/f86ca2cd7d4f8442.jpg',
