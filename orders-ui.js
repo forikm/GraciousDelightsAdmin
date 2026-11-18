@@ -22,7 +22,7 @@ const ACTION_LABELS = {
 const ACTION_HELP = {
   accepted: 'The customer will see that you accepted the request. Its items stay reserved.',
   ready: 'The customer will see that their order is ready.',
-  completed: 'This records fulfillment and deducts these units from finished stock.',
+  completed: 'Mark as fulfilled and deduct the items from stock.',
   declined: 'This releases the reserved products for other customers.',
   cancelled: 'This releases the reserved products for other customers.'
 };
