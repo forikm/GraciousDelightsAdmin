@@ -1,4 +1,4 @@
-import { SIGN_CATALOG } from './menu-catalog.js';
+import { CAKES, COOKIES, productCategory, SAVORY_MEALS, SHOP_CATEGORIES, SIGN_CATALOG, SWEET_BREADS } from './menu-catalog.js';
 import { PRODUCT_PHOTOS } from './product-photos.js';
 
 export const MAX_STOCK = 19;
@@ -59,6 +59,8 @@ function validateProduct(state, product, existingId) {
   if(product.stockLimit!==undefined){numeric(product.stockLimit,'Stock capacity',1,true);if(product.stockLimit>10000)fail('Stock capacity cannot exceed 10,000 units.');if(product.stockLimit<product.stock)fail('Stock capacity cannot be lower than current stock.');}
   product.name = text(product.name, 'Product name');
   product.category = text(product.category, 'Category', 60);
+  product.category = productCategory(product);
+  if (!SHOP_CATEGORIES.includes(product.category)) fail('Choose a menu category.');
   product.description = text(product.description, 'Description', 1000);
   numeric(product.price, 'Price', 0.01);
   if (Math.abs(product.price * 100 - Math.round(product.price * 100)) > 1e-8) fail('Price supports up to 2 decimal places.');
@@ -273,12 +275,12 @@ export function createSeed() {
   ].map(([id, name, unit, quantity, threshold]) => ({ id, name, unit, quantity, threshold }));
   const recipe = (...rows) => rows.map(([ingredientId, amount]) => ({ ingredientId, amount }));
   const products = [
-    { id: 'banana-loaf', name: 'Loaded Banana Bread', category: 'Breads & pastries', price: 180, stock: 8, image: 'assets/facebook/a354c03220336924.jpg', description: 'A moist banana loaf topped with chocolate and nuts. A little homemade happiness to share.', portion: '1 loaf', recipe: recipe(['flour',200],['sugar',100],['butter',60],['eggs',2],['banana',250],['chocolate',30]) },
-    { id: 'chocolate-cake', name: 'Chocolate Celebration Cake', category: 'Cakes & sweets', price: 650, stock: 3, image: 'assets/facebook/d48aa4ba35954fb9.jpg', description: 'Rich chocolate cake with a generous swirl of cream and chocolate drizzle. Made for sweet celebrations.', portion: '1 whole cake', recipe: recipe(['flour',250],['sugar',200],['butter',100],['eggs',3],['chocolate',200],['milk',150]) },
-    { id: 'ube-cake', name: 'Ube Celebration Cake', category: 'Cakes & sweets', price: 600, stock: 2, image: 'assets/facebook/f86ca2cd7d4f8442.jpg', description: 'A beautiful purple celebration cake for bringing everyone together around the table.', portion: '1 whole cake', recipe: recipe(['flour',250],['sugar',180],['butter',100],['eggs',3],['ube',200],['milk',150]) },
-    { id: 'cookies', name: 'Chocolate Chip Cookies', category: 'Cakes & sweets', price: 120, stock: 12, image: 'assets/facebook/b511fbfde20f8301.jpg', description: 'Golden homemade cookies dotted with chocolate. An easy treat for a cozy afternoon.', portion: '1 pack', recipe: recipe(['flour',100],['sugar',60],['butter',50],['eggs',1],['chocolate',50]) },
-    { id: 'lumpia', name: 'Crispy Lumpia Platter', category: 'Snacks', price: 280, stock: 5, image: 'assets/facebook/d63443ed617e749b.jpg', description: 'Golden, crispy rolls arranged for sharing. A savory favorite for snacks and gatherings.', portion: '1 platter · 20 pieces', recipe: recipe(['pork',300],['vegetables',100],['wrappers',20]) },
-    { id: 'family-tray', name: 'Family Sharing Tray', category: 'Family trays', price: 850, stock: 0, image: 'assets/facebook/14989151db935458.jpg', description: 'A generous selection of savory dishes for a family meal. A table full of good food and good company.', portion: '1 family tray', recipe: recipe(['chicken',800],['pork',300],['vegetables',400],['rice',600]) }
+    { id: 'banana-loaf', name: 'Loaded Banana Bread', category: SWEET_BREADS, price: 180, stock: 8, image: 'assets/facebook/a354c03220336924.jpg', description: 'A moist banana loaf topped with chocolate and nuts. A little homemade happiness to share.', portion: '1 loaf', recipe: recipe(['flour',200],['sugar',100],['butter',60],['eggs',2],['banana',250],['chocolate',30]) },
+    { id: 'chocolate-cake', name: 'Chocolate Celebration Cake', category: CAKES, price: 650, stock: 3, image: 'assets/facebook/d48aa4ba35954fb9.jpg', description: 'Rich chocolate cake with a generous swirl of cream and chocolate drizzle. Made for sweet celebrations.', portion: '1 whole cake', recipe: recipe(['flour',250],['sugar',200],['butter',100],['eggs',3],['chocolate',200],['milk',150]) },
+    { id: 'ube-cake', name: 'Ube Celebration Cake', category: CAKES, price: 600, stock: 2, image: 'assets/facebook/f86ca2cd7d4f8442.jpg', description: 'A beautiful purple celebration cake for bringing everyone together around the table.', portion: '1 whole cake', recipe: recipe(['flour',250],['sugar',180],['butter',100],['eggs',3],['ube',200],['milk',150]) },
+    { id: 'cookies', name: 'Chocolate Chip Cookies', category: COOKIES, price: 120, stock: 12, image: 'assets/facebook/b511fbfde20f8301.jpg', description: 'Golden homemade cookies dotted with chocolate. An easy treat for a cozy afternoon.', portion: '1 pack', recipe: recipe(['flour',100],['sugar',60],['butter',50],['eggs',1],['chocolate',50]) },
+    { id: 'lumpia', name: 'Crispy Lumpia Platter', category: SAVORY_MEALS, price: 280, stock: 5, image: 'assets/facebook/d63443ed617e749b.jpg', description: 'Golden, crispy rolls arranged for sharing. A savory favorite for snacks and gatherings.', portion: '1 platter · 20 pieces', recipe: recipe(['pork',300],['vegetables',100],['wrappers',20]) },
+    { id: 'family-tray', name: 'Family Sharing Tray', category: SAVORY_MEALS, price: 850, stock: 0, image: 'assets/facebook/14989151db935458.jpg', description: 'A generous selection of savory dishes for a family meal. A table full of good food and good company.', portion: '1 family tray', recipe: recipe(['chicken',800],['pork',300],['vegetables',400],['rice',600]) }
   ].map(p => ({ ...p, active: true }));
   const state = { version: 1, revision: 0, ingredients, products, activity: [], orders: [] };
   log(state, 'setup', 'Sample ingredient inventory loaded; opening quantities recorded before sample production.');

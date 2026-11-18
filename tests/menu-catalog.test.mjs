@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SIGN_CATALOG, SIGN_CATEGORIES } from '../menu-catalog.js';
+import { CAKES, COOKIES, SAVORY_MEALS, SIGN_CATALOG, SIGN_CATEGORIES, SWEET_BREADS } from '../menu-catalog.js';
 import { PRODUCT_PHOTOS } from '../product-photos.js';
 import { createSeed, transition } from '../domain.js';
+import { present } from '../lib/store.js';
 
-test('the signs contain 31 selling options in six categories with the listed prices',()=>{
+test('the signs contain 31 selling options in three categories with the listed prices',()=>{
   assert.equal(SIGN_CATALOG.length,31);
   assert.equal(new Set(SIGN_CATALOG.map(p=>p.id)).size,31);
-  assert.deepEqual([...new Set(SIGN_CATALOG.map(p=>p.category))],SIGN_CATEGORIES);
+  assert.deepEqual(SIGN_CATEGORIES,[SWEET_BREADS,COOKIES,CAKES]);
+  assert.deepEqual(new Set(SIGN_CATALOG.map(p=>p.category)),new Set(SIGN_CATEGORIES));
   const price=id=>SIGN_CATALOG.find(p=>p.id===`sign-${id}`).price;
   assert.equal(price('chocolate-crinkles-piece'),12);
   assert.equal(price('ube-crinkles-tub'),125);
@@ -59,4 +61,25 @@ test('imports zero-stock menu products without changing inventory and safely ret
   const ready=transition(saved,{type:'editProduct',id:product.id,product:{...product,recipe:[{ingredientId:'flour',amount:10}]}});
   assert.equal(ready.products.find(p=>p.id===product.id).recipePending,undefined);
   assert.equal(transition(ready,{type:'produce',id:product.id,quantity:1}).products.find(p=>p.id===product.id).stock,1);
+});
+
+test('existing product categories are updated in both catalog views without rewriting saved products',()=>{
+  const original=createSeed();
+  const rows=[
+    ['Breads & pastries',SWEET_BREADS],['Cakes & sweets',CAKES],['Cakes & sweets',CAKES],
+    ['Cakes & sweets',COOKIES],['Snacks',SAVORY_MEALS],['Family trays',SAVORY_MEALS]
+  ];
+  for (const [index,[legacy]] of rows.entries()) original.products[index].category=legacy;
+  const saved=structuredClone(original);
+  for (const admin of [true,false]) {
+    const viewed=present(original,{admin,owner:'test'});
+    assert.deepEqual(viewed.products.map(p=>p.category),rows.map(([,category])=>category));
+    assert.deepEqual(viewed.products.map(({id,price,stock})=>({id,price,stock})),
+      original.products.map(({id,price,stock})=>({id,price,stock})));
+  }
+  assert.deepEqual(original,saved);
+  const product=original.products[0];
+  assert.throws(()=>transition(original,{type:'editProduct',id:product.id,product:{...product,category:'Unlisted'}}),/Choose a menu category/);
+  const edited=transition(original,{type:'editProduct',id:product.id,product});
+  assert.equal(edited.products[0].category,SWEET_BREADS);
 });

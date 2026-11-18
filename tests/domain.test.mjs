@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSeed, transition, requirements, capacity, available, reserved } from '../domain.js';
 
-const sampleProduct = () => ({ name:'Test banana loaf',category:'Test category',price:100,stock:2,description:'A test loaf',portion:'1 loaf',image:'assets/facebook/a354c03220336924.jpg',recipe:[{ingredientId:'flour',amount:100},{ingredientId:'eggs',amount:1}] });
+const sampleProduct = () => ({ name:'Test banana loaf',category:'Sweet Breads & Pastries',price:100,stock:2,description:'A test loaf',portion:'1 loaf',image:'assets/facebook/a354c03220336924.jpg',recipe:[{ingredientId:'flour',amount:100},{ingredientId:'eggs',amount:1}] });
 test('seed has photos, valid recipes, and all product stocks below 20',()=>{
   const s=createSeed();
   assert.equal(s.products.length,6);
