@@ -95,8 +95,104 @@
 #login-form :is(label, .button) { font-size: 14px; }
 #login-form input { min-height: 44px; font-size: 16px; }
 
+.shortcut-mobile, .mobile-admin-nav { display: none; }
+.kitchen-shortcut { gap: 8px; }
+.order-sound[aria-pressed="true"] { color: var(--wine); background: #f1e5e6; }
+#header .brand small { text-transform: uppercase; }
+
 @media (max-width: 900px) {
-  .admin-sidebar nav { flex-wrap: wrap; overflow: visible; gap: 4px 8px; }
-  .admin-sidebar nav a .icon { display: none; }
-  .admin-sidebar .sign-out { margin-top: 8px; }
+  #header .header-inner { min-height: 62px; padding: 8px 14px; gap: 10px; }
+  #header .brand { min-width: 0; gap: 8px; }
+  #header .brand img { width: 36px; height: 36px; flex: 0 0 36px; }
+  #header .brand > span { font-size: clamp(15px, 4.1vw, 19px); line-height: 1.1; }
+  #header .brand small { margin-top: 4px; font-size: 8px; letter-spacing: .09em; }
+  #header .header-actions { flex: 0 0 auto; gap: 6px; }
+  #header .kitchen-shortcut {
+    min-width: 54px;
+    min-height: 44px;
+    padding: 4px 7px;
+    gap: 2px;
+    flex-direction: column;
+    font-size: 10px;
+  }
+  #header .kitchen-shortcut .icon { width: 16px; height: 16px; }
+  #header .shortcut-desktop { display: none; }
+  #header .shortcut-mobile { display: inline; white-space: nowrap; }
+  #header .install-button { min-width: 44px; min-height: 44px; justify-content: center; }
+  #header.is-signed-in .header-actions .install-button:not([hidden]) { display: none !important; }
+  #header.is-signed-in + #install-promotion { display: none; }
+
+  .admin-layout { grid-template-columns: minmax(0, 1fr); }
+  .admin-sidebar, .admin-topline { display: none; }
+  .mobile-admin-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--paper);
+  }
+  .mobile-admin-links { display: flex; flex: 1; justify-content: space-between; }
+  .mobile-admin-links a, #admin-more summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 6px;
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: clamp(12px, 3.2vw, 14px);
+    line-height: 1.3;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .mobile-admin-links a.active,
+  #admin-more:is([open], .has-current) summary,
+  .mobile-admin-panel a.active { background: #f1e5e6; color: var(--wine); }
+  .mobile-admin-links a > .icon { display: none; }
+  .mobile-admin-links .nav-count { margin-left: 0; padding: 1px 4px; font-size: 10px; color: #79501f; }
+  #admin-more { position: relative; flex: 0 0 auto; }
+  #admin-more summary { cursor: pointer; list-style: none; }
+  #admin-more summary::-webkit-details-marker { display: none; }
+  #admin-more summary .icon { width: 12px; height: 12px; }
+  #admin-more[open] summary .icon { transform: rotate(180deg); }
+  .mobile-admin-panel {
+    position: absolute;
+    inset: calc(100% + 5px) 0 auto auto;
+    z-index: 5;
+    display: grid;
+    width: min(240px, calc(100vw - 24px));
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--paper);
+    box-shadow: 0 8px 20px #302a2822;
+  }
+  #admin-more:not([open]) .mobile-admin-panel { display: none; }
+  .mobile-admin-panel a, .mobile-more-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    text-align: left;
+    font-size: 14px;
+  }
+  .mobile-admin-panel a:hover, .mobile-more-item:hover { background: var(--cream); }
+  .mobile-admin-panel .icon { width: 16px; height: 16px; }
+  .mobile-sign-out { color: var(--wine); border-top: 1px solid var(--border); border-radius: 0; }
+  .admin-content { padding: 20px 16px 38px; }
+  .admin-heading { margin: 0 0 18px; }
+
+  #toast {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    max-width: min(330px, calc(100% - 24px));
+    padding: 9px 13px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
 }

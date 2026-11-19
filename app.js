@@ -23,6 +23,10 @@ const paths = {
   book:'<path d="M12 5c-4-3-8-2-9-1v15c4-2 6-1 9 1 3-2 5-3 9-1V4c-3-2-6-1-9 1Zm0 0v15"/>',
   history:'<path d="M4 5v5h5M4 10a9 9 0 1 1 1 8M12 7v5l3 2"/>',
   download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12a2 2 0 0 0 4 0"/>',
+  'bell-off':'<path d="m3 3 18 18M6 8c0 7-3 7-3 9h14m4 0c0-2-3-2-3-9a6 6 0 0 0-9-5m1 17a2 2 0 0 0 4 0"/>',
+  external:'<path d="M14 3h7v7m0-7-9 9m7 1v7H4V5h7"/>',
+  chevron:'<path d="m6 9 6 6 6-6"/>',
   phone:'<path d="m7 3 3 5-3 3c2 3 3 4 6 6l3-3 5 3c0 6-7 5-12 0S0 3 7 3Z"/>',
   pin:'<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',
   check:'<path d="m5 12 4 4 10-10"/>',
@@ -42,8 +46,11 @@ function orderSound(){
 }
 async function toggleOrderSound(){
   soundEnabled=!soundEnabled;
-  if(soundEnabled){try{orderAudio ||= new (window.AudioContext||window.webkitAudioContext)();await orderAudio.resume();orderSound();}catch{soundEnabled=false;toast('Sound is unavailable in this browser.');}}
-  header();toast(soundEnabled?'Order sound enabled. Keep this workspace open; the inbox checks every 15 seconds.':'Order sound disabled.');
+  if(soundEnabled){
+    try{orderAudio ||= new (window.AudioContext||window.webkitAudioContext)();await orderAudio.resume();orderSound();}
+    catch{soundEnabled=false;header();toast('Sound is unavailable in this browser.');return;}
+  }
+  header();toast(soundEnabled?'Order sound on while the kitchen is open.':'Order sound off.');
 }
 const standalone = window.matchMedia('(display-mode: standalone)');
 const isInstalled = () => standalone.matches || navigator.standalone === true;
@@ -51,7 +58,7 @@ function installPromotion() {
   const panel = $('#install-promotion');
   panel.hidden = isInstalled() || installDismissed;
   panel.innerHTML = `<div><strong>Kitchen admin on your phone</strong><span>Open the kitchen inbox from your home screen.</span></div><button class="button primary" data-action="install">${icon('download')} ${deferredInstall ? 'Install app' : 'Get the app'}</button><button class="icon-button" data-action="dismiss-install" aria-label="Dismiss installation suggestion">${icon('close')}</button>`;
-  document.querySelectorAll('.install-button').forEach(button => { button.hidden = isInstalled(); });
+  document.querySelectorAll('.install-button, [data-mobile-install]').forEach(button => { button.hidden = isInstalled(); });
 }
 state = {version:1,revision:0,products:[],ingredients:[],activity:[],orders:[],admin:false,myOrderIds:[]};
 let loading = true, refreshing = false, requestEpoch = 0;
@@ -75,11 +82,11 @@ async function refreshState() {
     const next=await api('state');
     if(epoch!==requestEpoch)return;
     const changed=JSON.stringify(next)!==JSON.stringify(state);
-    const newOrder=next.admin && next.orders.some(o=>!state.orders.some(old=>old.id===o.id));
+    const newOrder=state.admin && next.admin && next.orders.some(o=>o.status==='pending' && !state.orders.some(old=>old.id===o.id));
     const recovered=!!storageError || loading;
     if(state.admin && !next.admin)$('#modal').close();
     state=next;storageError='';loading=false;
-    if(changed || recovered){render();ordering.refresh();if(newOrder){orderSound();toast('New order request received. Open Orders to review.');}}
+    if(changed || recovered){render();ordering.refresh();if(newOrder){orderSound();toast('New order request. Review it in Orders.');}}
   } catch(error) {if(epoch===requestEpoch){storageError=error.message;loading=false;render();}}
   finally {refreshing=false;}
 }
@@ -136,8 +143,19 @@ function stockBadge(p) {
   return `<span class="stock ${qty === 0 ? 'sold-out' : qty <= 3 ? 'low' : ''}"><span class="dot"></span>${qty === 0 ? 'Sold out' : `${qty} available`}</span>`;
 }
 function header() {
+  const headerElement = $('#header');
+  const restoreFocus = rememberFocus(headerElement);
+  headerElement.classList.toggle('is-signed-in', state.admin);
   document.title=state.admin?`${state.orders.filter(o=>o.status==='pending').length?'('+state.orders.filter(o=>o.status==='pending').length+') ':''}Gracious Delights · Kitchen`:'Gracious Delights · Kitchen sign in';
-  $('#header').innerHTML = `<div class="header-inner"><a class="brand" href="#admin/orders" aria-label="Gracious Delights admin home"><img src="assets/facebook/a00aff175be206dd.jpg" alt="Gracious Delights logo"><span>Gracious Delights<small>KITCHEN ADMIN</small></span></a><div class="header-actions">${state.admin?`<button class="button secondary order-sound" data-action="order-sound" aria-pressed="${soundEnabled}">${soundEnabled?'Order sound on':'Enable order sound'}</button>`:''}<button class="install-button" data-action="install" aria-label="Get the app">${icon('download')}<span>Get the app</span></button><a class="button secondary" href="https://gracious-delights-chi.vercel.app/" target="_blank" rel="noopener noreferrer">Customer menu ↗</a></div></div>`;
+  headerElement.innerHTML = `<div class="header-inner">
+    <a class="brand" href="#admin/orders" aria-label="Gracious Delights kitchen home"><img src="assets/facebook/a00aff175be206dd.jpg" alt=""><span>Gracious Delights<small>Kitchen admin</small></span></a>
+    <div class="header-actions">
+      ${state.admin ? `<button class="button secondary kitchen-shortcut order-sound" data-action="order-sound" aria-label="Order sound" aria-pressed="${soundEnabled}">${icon(soundEnabled?'bell':'bell-off')}<span class="shortcut-desktop">Order sound</span><span class="shortcut-mobile">Sound</span></button>` : ''}
+      <button class="install-button" data-action="install" aria-label="Install kitchen app" ${isInstalled()?'hidden':''}>${icon('download')}<span>Get the app</span></button>
+      <a class="button secondary kitchen-shortcut" href="https://gracious-delights-chi.vercel.app/" aria-label="Customer menu on the storefront" target="_blank" rel="noopener noreferrer">${icon('external')}<span class="shortcut-desktop">Customer menu</span><span class="shortcut-mobile">Storefront</span></a>
+    </div>
+  </div>`;
+  restoreFocus();
 }
 function footer() {
   $('#footer').innerHTML = `<div class="footer-inner"><span>Gracious Delights <span class="subtle">· Homemade in Binmaley</span></span><span class="footer-links"><a href="${FB}" target="_blank" rel="noopener noreferrer">Find us on Facebook ↗</a><span id="connection" class="connection">${navigator.onLine ? 'Online' : 'Offline'}</span></span></div><p class="demo-note">Homemade in Binmaley · Orders are confirmed by our kitchen.</p>`;
@@ -153,10 +171,50 @@ function render() {
   restoreFocus();
 }
 function renderAdmin() {
-  const labels = { orders:['Orders','Review new requests and follow orders through fulfillment.'], announcements:['Announcements','Keep customers up to date with news from your kitchen.'], presentation:['Presentation history','Completed and cancelled orders for your walkthrough.'], products:['Products'], inventory:['Ingredient inventory','Keep your kitchen ready for the next batch.'], recipes:['Recipes','The ingredients behind every delight.'], activity:['Activity log','A clear record of every kitchen update.'], settings:['Backups','Keep a copy of your shop records.'] };
+  const labels = { orders:['Orders','Review new requests and follow orders through fulfillment.'], announcements:['Announcements'], presentation:['Presentation history','Completed and cancelled orders for your walkthrough.'], products:['Products'], inventory:['Ingredient inventory','Keep your kitchen ready for the next batch.'], recipes:['Recipes','The ingredients behind every delight.'], activity:['Activity log','A clear record of every kitchen update.'], settings:['Backups','Keep a copy of your shop records.'] };
   const tabs = [['orders','book','Orders'],['products','box','Products'],['inventory','leaf','Ingredients'],['recipes','book','Recipes'],['announcements','book','Announcements'],['activity','history','Activity log'],['presentation','history','Presentation history'],['settings','download','Backups']];
   const lowIngredients = state.ingredients.filter(i => i.quantity <= i.threshold);
-  $('#main').innerHTML = `<div class="admin-layout"><aside class="admin-sidebar"><p class="eyebrow">THE KITCHEN</p><h2>Admin workspace</h2><nav aria-label="Admin navigation">${tabs.map(([key,ico,label]) => `<a href="#admin/${key}" class="${section === key ? 'active' : ''}" ${section === key ? 'aria-current="page"' : ''}>${icon(ico)}${label}${key === 'orders' && ordering.pendingCount()?`<span class="nav-count">${ordering.pendingCount()}</span>`:''}${key === 'inventory' && lowIngredients.length ? `<span class="nav-count">${lowIngredients.length}</span>` : ''}</a>`).join('')}</nav><div class="sidebar-note">${icon('shield')}<strong>Kitchen admin</strong><p>Orders and inventory sync with the database.</p><a href="https://gracious-delights-chi.vercel.app/" target="_blank" rel="noopener noreferrer">View customer menu ↗</a></div><button class="button secondary sign-out" data-action="logout">Sign out</button></aside><section class="admin-content"><div class="admin-topline"><span class="local-pill"><span class="dot"></span>${storageError ? 'Connection issue' : 'Connected to kitchen'}</span></div><div class="admin-heading"><div><h1>${labels[section][0]}</h1>${labels[section][1] ? `<p>${labels[section][1]}</p>` : ''}</div>${section === 'products' ? `<button class="button primary" data-action="add-product">${icon('plus')} Add product</button>` : section === 'inventory' ? `<button class="button primary" data-action="add-ingredient">${icon('plus')} Add ingredient</button>` : ''}</div><div id="admin-body"></div></section></div>`;
+  const pending = ordering.pendingCount();
+  const quickPages = ['orders', 'products', 'announcements'];
+  const moreOpen = $('#admin-more')?.open;
+  const navLink = ([key, glyph, label]) => {
+    const active = section === key;
+    const count = key === 'orders' ? pending : key === 'inventory' ? lowIngredients.length : 0;
+    return `<a href="#admin/${key}" class="${active?'active':''}" ${active?'aria-current="page"':''}>${icon(glyph)}<span>${label}</span>${count?`<span class="nav-count">${count}</span>`:''}</a>`;
+  };
+  const headingActions = {
+    products: ['add-product', 'Add product'],
+    inventory: ['add-ingredient', 'Add ingredient'],
+    announcements: ['add-announcement', 'Write announcement']
+  };
+  const headingAction = headingActions[section];
+  $('#main').innerHTML = `<div class="admin-layout">
+    <aside class="admin-sidebar">
+      <p class="eyebrow">THE KITCHEN</p><h2>Admin workspace</h2>
+      <nav aria-label="Admin navigation">${tabs.map(navLink).join('')}</nav>
+      <div class="sidebar-note">${icon('shield')}<strong>Kitchen admin</strong><p>Orders and inventory sync with the database.</p><a href="https://gracious-delights-chi.vercel.app/" target="_blank" rel="noopener noreferrer">View customer menu ↗</a></div>
+      <button class="button secondary sign-out" data-action="logout">Sign out</button>
+    </aside>
+    <nav class="mobile-admin-nav" aria-label="Kitchen navigation">
+      <div class="mobile-admin-links">${tabs.filter(([key])=>quickPages.includes(key)).map(navLink).join('')}</div>
+      <details id="admin-more" class="${quickPages.includes(section)?'':'has-current'}" ${moreOpen?'open':''}>
+        <summary>More ${icon('chevron')}</summary>
+        <div class="mobile-admin-panel">
+          ${tabs.filter(([key])=>!quickPages.includes(key)).map(navLink).join('')}
+          <button class="mobile-more-item" data-action="install" data-mobile-install ${isInstalled()?'hidden':''}>${icon('download')} Install app</button>
+          <button class="mobile-more-item mobile-sign-out" data-action="logout">Sign out</button>
+        </div>
+      </details>
+    </nav>
+    <section class="admin-content">
+      <div class="admin-topline"><span class="local-pill"><span class="dot"></span>${storageError ? 'Connection issue' : 'Connected to kitchen'}</span></div>
+      <div class="admin-heading ${section==='announcements'?'announcement-heading':''}">
+        <div><h1>${labels[section][0]}</h1>${labels[section][1]?`<p>${labels[section][1]}</p>`:''}</div>
+        ${headingAction?`<button class="button primary" data-action="${headingAction[0]}">${icon('plus')} ${headingAction[1]}</button>`:''}
+      </div>
+      <div id="admin-body"></div>
+    </section>
+  </div>`;
   const body = $('#admin-body');
   if (section === 'orders') {
     body.innerHTML=ordering.adminOrders();ordering.wireAdmin();
@@ -302,6 +360,14 @@ async function install(){
   openModal('Install Gracious Delights Admin',`<div class="install-content">${icon('download')}<p>Open the kitchen inbox from your home screen.</p><ol>${steps}</ol><p class="help-note">Go online to review orders and update stock.</p><button class="button secondary" data-action="close">Got it</button></div>`);
 }
 document.addEventListener('click',async e=>{
+  const more = $('#admin-more');
+  if (more?.open && !more.contains(e.target)) more.open = false;
+  const currentLink = e.target.closest('#admin-more [aria-current="page"]');
+  if (currentLink && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    more.open = false;
+    focusHeading($('.admin-heading h1'));
+  }
   const el=e.target.closest('[data-action]');if(!el)return;
   if (el.getAttribute('aria-disabled') === 'true') return;
   const action=el.dataset.action,id=el.dataset.id;
@@ -335,7 +401,19 @@ document.addEventListener('click',async e=>{
   if(action==='logout'){try{requestEpoch++;state=await api('logout',{});$('#modal').close();render();focusHeading($('#main h1'));}catch(error){toast(error.message);}}
   if(action==='retry')await refreshState();
 });
+document.addEventListener('keydown', event => {
+  const more = $('#admin-more');
+  if (event.key !== 'Escape' || $('#modal').open || !more?.open) return;
+  event.preventDefault();
+  more.open = false;
+  more.querySelector('summary').focus();
+});
+document.addEventListener('focusin', event => {
+  const more = $('#admin-more');
+  if (more?.open && !$('#modal').open && !more.contains(event.target)) more.open = false;
+});
 function route(moveFocus = false){
+  $('#admin-more')?.removeAttribute('open');
   const hash=location.hash;
   mode='admin';const next=hash.split('/')[1];section=['orders','announcements','presentation','products','inventory','recipes','activity','settings'].includes(next)?next:'orders';
   if($('#modal').open)$('#modal').close();
