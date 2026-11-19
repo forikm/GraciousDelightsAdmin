@@ -1,2 +1,47 @@
 .announcements-page{max-width:900px;margin:0 auto;padding:52px 0 70px}.announcements-intro{border-bottom:1px solid var(--border);padding-bottom:32px;margin-bottom:30px}.announcements-intro h1{font-family:var(--serif);font-size:clamp(38px,5vw,56px);font-weight:400;line-height:1.15;margin:13px 0 16px}.announcements-intro>p:not(.eyebrow){font-size:16px;line-height:1.7;color:var(--muted);margin-bottom:18px}.announcements-intro .text-button{font-size:14px}.announcements-list{display:grid;gap:24px}.announcement-card{border:1px solid var(--border);padding:28px;background:var(--paper);border-radius:8px;min-width:0}.announcement-meta{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-bottom:16px}.announcement-pin,.announcement-state{background:#f2e8df;color:var(--wine);padding:6px 9px;border-radius:4px;font-weight:500}.announcement-state.is-published{background:#e8f0e4;color:#385b3b}.announcement-card h2{font-family:var(--serif);font-size:29px;line-height:1.3;font-weight:400;overflow-wrap:anywhere}.announcement-body{font-size:15px;line-height:1.8;margin-top:18px;white-space:pre-wrap;overflow-wrap:anywhere}.announcements-empty{padding:34px;background:#f4efe7;border-radius:8px}.announcements-empty h2{font-family:var(--serif);font-size:28px;font-weight:400}.announcements-empty p{font-size:15px;line-height:1.8;color:var(--muted);max-width:580px;margin:14px 0 22px}.announcement-admin-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:25px}.announcement-admin-top p{font-size:14px;line-height:1.8;color:var(--muted);max-width:550px}.announcement-admin-top .button{white-space:nowrap}.announcement-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--border)}.announcement-form>label{margin-bottom:18px;font-size:14px}.announcement-form input:not([type=checkbox]),.announcement-form textarea{font-size:16px}.announcement-form .announcement-check{display:flex;flex-direction:row;align-items:center;gap:10px;line-height:1.6}.announcement-check input[type=checkbox]{width:18px;height:18px;min-height:18px;flex-shrink:0}.latest-announcement{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 25px;padding:16px 0;border-bottom:1px solid var(--border);font-size:14px}.latest-announcement>span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--wine)}.latest-announcement a{color:var(--wine);text-decoration:underline;text-underline-offset:4px}.mobile-shop-nav{display:none}@media(max-width:650px){.announcements-page{padding:30px 0 45px}.announcements-intro{padding-bottom:25px;margin-bottom:22px}.announcement-card{padding:22px 18px}.announcement-card h2{font-size:27px}.announcement-body{font-size:15px}.announcement-meta{font-size:12px}.announcements-empty{padding:24px 20px}.announcement-admin-top{flex-direction:column}.announcement-admin-top .button{width:100%}.announcement-actions .button{flex:1;font-size:14px;min-height:44px}.mobile-shop-nav{display:flex;gap:22px;padding:0 20px 12px;border-bottom:1px solid var(--border);font-size:13px}.mobile-shop-nav a{padding:7px 0;color:var(--muted)}.mobile-shop-nav a[aria-current=page]{color:var(--wine);border-bottom:2px solid var(--wine)}.latest-announcement{gap:8px;font-size:13px}}
 .latest-announcement a{min-width:0;overflow-wrap:anywhere;flex:1}
+
+.announcement-photos { margin-top: 20px; }
+.announcement-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.announcement-photo-grid a {
+  display: block;
+  border-radius: 6px;
+  background: var(--cream);
+}
+.announcement-photo-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.announcement-photo-grid.single-photo {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 560px;
+}
+.announcement-photo-grid.single-photo img {
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.announcement-photos details { margin-top: 8px; }
+.announcement-photos summary {
+  min-height: 44px;
+  padding: 10px 2px;
+  color: var(--wine);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.announcement-photos details[open] > .announcement-photo-grid { margin-top: 4px; }
+
+@media (max-width: 650px) {
+  .announcement-photo-grid { gap: 8px; }
+}
