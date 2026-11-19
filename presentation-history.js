@@ -14,7 +14,9 @@ const entries=[
  ['2026-11-13T12:25:00+08:00','Miguel Navarro','cancelled',[['ensaymada-pack-4',2]],'Customer could not make the pickup time.'],
  ['2026-11-12T15:50:00+08:00','Bea Castillo','completed',[['matcha-cookie',4],['banana-square',4]],'Collected at the shop.'],
  ['2026-11-11T14:10:00+08:00','Rafael Torres','completed',[['cinnamon-sliced-almonds-pan',1],['cinnamon-apple-caramel-sauce-pan',1]],'Both pans collected.'],
- ['2026-11-10T10:15:00+08:00','Ella Dela Cruz','cancelled',[['yema-cake-ube',2],['banana-loaf',1]],'Plans changed; cancelled before preparation.']
+ ['2026-11-10T10:15:00+08:00','Ella Dela Cruz','cancelled',[['yema-cake-ube',2],['banana-loaf',1]],'Plans changed; cancelled before preparation.'],
+ ['2026-10-30T16:35:00+08:00','C. Baniqued','completed',[['banana-loaf',2],['cinnamon-cheese-piece',1]],'Collected two banana loaves and a cinnamon roll.'],
+ ['2026-10-30T14:20:00+08:00','L. Agbayani','completed',[['cinnamon-classic-piece',2],['cinnamon-choco-fudge-piece',1]],'Assorted cinnamon rolls collected at pickup.']
 ];
 export const PRESENTATION_ORDERS=entries.map(([at,name,status,items,note],index)=>({
  id:`presentation-${index+1}`,reference:`GD-${String(148-index).padStart(4,'0')}`,at,name,status,note,
