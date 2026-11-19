@@ -1,24 +1,22 @@
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=value=>new Intl.DateTimeFormat('en-PH',{dateStyle:'long',timeZone:'Asia/Manila'}).format(new Date(value));
-export const sortedAnnouncements=items=>[...(items||[])].sort((a,b)=>Number(!!b.pinned)-Number(!!a.pinned)||new Date(b.publishedAt||b.createdAt)-new Date(a.publishedAt||a.createdAt));
-
-// Public Facebook photos matched to the four published announcement IDs.
-const photosByAnnouncement = new Map([
- ['1c5abd31-b984-44a4-96dd-672fcf497f20', [
+// Original Facebook dates and photos matched to the imported announcement IDs.
+const facebookPosts = new Map([
+ ['1c5abd31-b984-44a4-96dd-672fcf497f20', {postedAt:'2026-10-30T17:53:00+08:00', photos:[
    {src:'assets/announcements/banana-bread-1926094079523620.jpg', alt:'Banana bread loaves in foil pans', width:964, height:1280},
    {src:'assets/announcements/banana-bread-1926094129523615.jpg', alt:'Packs of hopiang baboy in blue wrappers', width:960, height:1280},
    {src:'assets/announcements/banana-bread-1926094202856941.jpg', alt:'A hand holding a pack of hopiang baboy', width:960, height:1280},
    {src:'assets/announcements/banana-bread-1926094246190270.jpg', alt:'Stacks of wrapped hopiang baboy', width:960, height:1280},
    {src:'assets/announcements/banana-bread-1926094276190267.jpg', alt:'Assorted cinnamon rolls in foil trays', width:1280, height:964},
    {src:'assets/announcements/banana-bread-1926094322856929.jpg', alt:'A second view of the assorted cinnamon rolls', width:1280, height:964},
- ]],
- ['5b19bb7c-73c3-42f7-9956-c7204390a218', [
+ ]}],
+ ['5b19bb7c-73c3-42f7-9956-c7204390a218', {postedAt:'2026-11-13T14:10:00+08:00', photos:[
    {src:'assets/facebook/956932590e81fb31.jpg', alt:'Rows of assorted ensaymada on a red tray', width:1542, height:2047},
    {src:'assets/facebook/9d66c6b0e97996c2.jpg', alt:'Cheese-topped and assorted ensaymada', width:1542, height:2047},
    {src:'assets/facebook/28b43450fed7ba55.jpg', alt:'Ensaymada and cinnamon rolls ready for the Baywalk pop-up', width:1542, height:2047},
    {src:'assets/announcements/baywalk-return-1945383197594708.jpg', alt:'Cinnamon rolls in individual foil pans', width:964, height:1280},
- ]],
- ['0ca8dfae-8ef9-456a-9df7-2b94d99fb1da', [
+ ]}],
+ ['0ca8dfae-8ef9-456a-9df7-2b94d99fb1da', {postedAt:'2026-11-15T19:07:00+08:00', photos:[
    {src:'assets/announcements/baywalk-thank-you-1948504333949261.jpg', alt:'Customers at the pastry stall in daylight', width:720, height:1280},
    {src:'assets/announcements/baywalk-thank-you-1948504530615908.jpg', alt:'Customers beside the Baywalk stall at sunset', width:720, height:1280},
    {src:'assets/announcements/baywalk-thank-you-1948504517282576.jpg', alt:'Shoppers browsing the pastry trays in daylight', width:720, height:1280},
@@ -29,15 +27,20 @@ const photosByAnnouncement = new Map([
    {src:'assets/announcements/baywalk-thank-you-1948504693949225.jpg', alt:'A customer choosing treats at the evening pop-up', width:720, height:1280},
    {src:'assets/announcements/baywalk-thank-you-1948506440615717.jpg', alt:'The Gracious Delights team behind the pastry table', width:1280, height:720},
    {src:'assets/announcements/baywalk-thank-you-1948504737282554.jpg', alt:'A group of shoppers choosing pastries at the Baywalk', width:1280, height:720},
- ]],
- ['ec6c9e31-3ee8-4540-a321-5a7b7c5cf64a', [
+ ]}],
+ ['ec6c9e31-3ee8-4540-a321-5a7b7c5cf64a', {postedAt:'2026-11-15T19:18:00+08:00', photos:[
    {src:'assets/announcements/baywalk-flyer-1948523487280679.jpg', alt:'Gracious Delights flyer for the Friday and Saturday Lingayen Baywalk pop-up', width:1254, height:1254},
- ]],
+ ]}],
 ]);
 const previewsPerAnnouncement = 4;
+const announcementDate = item => facebookPosts.get(item.id)?.postedAt || item.publishedAt || item.createdAt;
+
+export const sortedAnnouncements = items => [...(items || [])].sort((a,b) =>
+  Number(!!b.pinned) - Number(!!a.pinned) || Date.parse(announcementDate(b)) - Date.parse(announcementDate(a))
+);
 
 function renderPhotos(item) {
- const photos = photosByAnnouncement.get(item.id);
+ const photos = facebookPosts.get(item.id)?.photos;
  if (!photos?.length) return '';
  const grid = items => `<ul class="announcement-photo-grid${photos.length === 1 ? ' single-photo' : ''}">${items.map(({src, alt, width, height}) => `
    <li><a href="${esc(src)}" aria-label="View full-size photo of ${esc(alt.toLowerCase())}">
@@ -52,12 +55,12 @@ function renderPhotos(item) {
 
 export function renderAnnouncements(container,items){
  const published=sortedAnnouncements((items||[]).filter(item=>item.published));
- container.innerHTML=`<section class="announcements-page" aria-labelledby="announcements-title"><div class="announcements-intro"><h1 id="announcements-title">Announcements</h1><a class="text-button" href="#menu">Browse the menu →</a></div><div class="announcements-list">${published.length?published.map(item=>`<article class="announcement-card" aria-labelledby="announcement-${esc(item.id)}"><div class="announcement-meta">${item.pinned?'<span class="announcement-pin">Pinned update</span>':''}<time datetime="${esc(item.publishedAt||item.createdAt)}">${date(item.publishedAt||item.createdAt)}</time></div><h2 id="announcement-${esc(item.id)}">${esc(item.title)}</h2><p class="announcement-body">${esc(item.body)}</p>${renderPhotos(item)}</article>`).join(''):'<div class="announcements-empty"><h2>No announcements yet</h2></div>'}</div></section>`;
+ container.innerHTML=`<section class="announcements-page" aria-labelledby="announcements-title"><div class="announcements-intro"><h1 id="announcements-title">Announcements</h1><a class="text-button" href="#menu">Browse the menu →</a></div><div class="announcements-list">${published.length?published.map(item=>`<article class="announcement-card" aria-labelledby="announcement-${esc(item.id)}"><div class="announcement-meta">${item.pinned?'<span class="announcement-pin">Pinned update</span>':''}<time datetime="${esc(announcementDate(item))}">${date(announcementDate(item))}</time></div><h2 id="announcement-${esc(item.id)}">${esc(item.title)}</h2><p class="announcement-body">${esc(item.body)}</p>${renderPhotos(item)}</article>`).join(''):'<div class="announcements-empty"><h2>No announcements yet</h2></div>'}</div></section>`;
 }
 
 export function renderAnnouncementManager(container,items){
  const sorted=sortedAnnouncements(items);
- container.innerHTML=`<div class="announcement-admin-top"><p>Drafts are private. Published updates appear on the storefront. Pinned updates appear first.</p><button class="button primary" data-action="add-announcement">Write announcement</button></div><div class="announcements-list">${sorted.length?sorted.map(item=>`<article class="announcement-card"><div class="announcement-meta"><span class="announcement-state ${item.published?'is-published':''}">${item.published?'Published':'Draft'}</span>${item.pinned?'<span class="announcement-pin">Pinned</span>':''}<time datetime="${esc(item.updatedAt)}">Updated ${date(item.updatedAt)}</time></div><h2>${esc(item.title)}</h2><p class="announcement-body">${esc(item.body)}</p>${renderPhotos(item)}<div class="announcement-actions"><button class="button secondary" data-action="edit-announcement" data-id="${esc(item.id)}" aria-label="Edit ${esc(item.title)}">Edit</button><button class="button secondary" data-action="toggle-announcement" data-id="${esc(item.id)}" aria-label="${item.published?'Unpublish':'Publish'} ${esc(item.title)}">${item.published?'Unpublish':'Publish'}</button></div></article>`).join(''):'<div class="announcements-empty"><h2>Your updates start here</h2><p>Write your first announcement, then publish it when it is ready for customers.</p></div>'}</div>`;
+ container.innerHTML=`<div class="announcement-admin-top"><p>Drafts are private. Published updates appear on the storefront. Pinned updates appear first.</p><button class="button primary" data-action="add-announcement">Write announcement</button></div><div class="announcements-list">${sorted.length?sorted.map(item=>`<article class="announcement-card"><div class="announcement-meta"><span class="announcement-state ${item.published?'is-published':''}">${item.published?'Published':'Draft'}</span>${item.pinned?'<span class="announcement-pin">Pinned</span>':''}${facebookPosts.has(item.id) ? `<time datetime="${esc(announcementDate(item))}">Facebook post · ${date(announcementDate(item))}</time>` : `<time datetime="${esc(item.updatedAt)}">Updated ${date(item.updatedAt)}</time>`}</div><h2>${esc(item.title)}</h2><p class="announcement-body">${esc(item.body)}</p>${renderPhotos(item)}<div class="announcement-actions"><button class="button secondary" data-action="edit-announcement" data-id="${esc(item.id)}" aria-label="Edit ${esc(item.title)}">Edit</button><button class="button secondary" data-action="toggle-announcement" data-id="${esc(item.id)}" aria-label="${item.published?'Unpublish':'Publish'} ${esc(item.title)}">${item.published?'Unpublish':'Publish'}</button></div></article>`).join(''):'<div class="announcements-empty"><h2>Your updates start here</h2><p>Write your first announcement, then publish it when it is ready for customers.</p></div>'}</div>`;
 }
 
 export function announcementEditor(item,{openModal,formFooter,bindForm,commit,revision,toast}){
