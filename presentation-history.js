@@ -15,13 +15,29 @@ const entries=[
  ['2026-11-12T15:50:00+08:00','Bea Castillo','completed',[['matcha-cookie',4],['banana-square',4]],'Collected at the shop.'],
  ['2026-11-11T14:10:00+08:00','Rafael Torres','completed',[['cinnamon-sliced-almonds-pan',1],['cinnamon-apple-caramel-sauce-pan',1]],'Both pans collected.'],
  ['2026-11-10T10:15:00+08:00','Ella Dela Cruz','cancelled',[['yema-cake-ube',2],['banana-loaf',1]],'Plans changed; cancelled before preparation.'],
- ['2026-10-30T16:35:00+08:00','C. Baniqued','completed',[['banana-loaf',2],['cinnamon-cheese-piece',1]],'Collected two banana loaves and a cinnamon roll.'],
- ['2026-10-30T14:20:00+08:00','L. Agbayani','completed',[['cinnamon-classic-piece',2],['cinnamon-choco-fudge-piece',1]],'Assorted cinnamon rolls collected at pickup.']
+ ['2026-10-30T16:35:00+08:00','Carl','completed',[['banana-loaf',2],['cinnamon-cheese-piece',1]],'Collected two banana loaves and a cinnamon roll.'],
+ ['2026-10-30T14:20:00+08:00','Lizandro','completed',[['cinnamon-classic-piece',2],['cinnamon-choco-fudge-piece',1]],'Assorted cinnamon rolls collected at pickup.'],
+ ['2026-10-31T11:45:00+08:00','Mika','completed',[['banana-loaf',1],['cinnamon-classic-piece',2]],'Picked up before noon.'],
+ ['2026-11-01T15:10:00+08:00','Jomar','completed',[['ensaymada-pack-3',1],['yema-cake-classic',1]],'The assorted pack and cake were collected together.'],
+ ['2026-11-02T16:20:00+08:00','Aira','completed',[['matcha-cookie',3],['ube-crinkles-tub',1]],'Cookies and crinkles collected at pickup.'],
+ ['2026-11-04T12:35:00+08:00','Aldrin','completed',[['cinnamon-cheese-pan',1],['banana-square',2]],'Picked up during lunch.'],
+ ['2026-11-05T14:15:00+08:00','Clarisse','completed',[['ensaymada-classic-cheese',2],['ensaymada-yema',2]],'Four ensaymada packed for pickup.'],
+ ['2026-11-06T17:05:00+08:00','Rhea','completed',[['yema-cake-ube',2],['chocolate-crinkles-tub',1]],'Both cakes and the crinkle tub were collected.'],
+ ['2026-11-07T10:50:00+08:00','Noel','completed',[['banana-loaf',2]],'Two banana loaves collected.'],
+ ['2026-11-08T15:30:00+08:00','Irene','completed',[['cinnamon-oreo-piece',2],['cinnamon-choco-fudge-piece',2]],'Four cinnamon rolls handed over at pickup.'],
+ ['2026-11-09T13:40:00+08:00','Arnel','completed',[['ensaymada-pack-4',1],['matcha-cookie',2]],'Picked up the assorted pack and cookies.'],
+ ['2026-11-10T16:55:00+08:00','Janelle','completed',[['banana-squares-pack-6',1],['yema-cake-classic',1]],'Banana squares and yema cake collected.'],
+ ['2026-11-12T11:25:00+08:00','Renzo','completed',[['cinnamon-apple-caramel-sauce-pan',1],['cinnamon-sliced-almonds-piece',2]],'Picked up the pan and two individual rolls.'],
+ ['2026-11-13T15:40:00+08:00','Mariel','completed',[['ensaymada-pack-6',1],['ube-crinkles-piece',4]],'Assorted ensaymada and crinkles collected.'],
+ ['2026-11-15T17:10:00+08:00','Emman','completed',[['cinnamon-classic-pan',2]],'Both cinnamon roll pans were picked up.'],
+ ['2026-11-17T14:50:00+08:00','Dianne','completed',[['matcha-cookie',2],['banana-loaf',1],['ensaymada-ube',2]],'Collected the loaf, cookies, and ensaymada.'],
+ ['2026-11-18T16:25:00+08:00','Adrian','completed',[['cinnamon-cheese-piece',3],['chocolate-crinkles-tub',1]],'Cinnamon rolls and crinkles collected in the afternoon.']
 ];
+// Assign references in insertion order so adding older records preserves existing references.
 export const PRESENTATION_ORDERS=entries.map(([at,name,status,items,note],index)=>({
  id:`presentation-${index+1}`,reference:`GD-${String(148-index).padStart(4,'0')}`,at,name,status,note,
  items:items.map(([slug,quantity])=>({productId:`sign-${slug}`,quantity}))
-}));
+})).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at));
 export function renderPresentationHistory(container,products,filter='all'){
  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=value=>new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',maximumFractionDigits:0}).format(value);
